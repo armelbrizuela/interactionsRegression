@@ -1,0 +1,181 @@
+---
+title: "Interacciones"
+format: 
+  html:
+    embed-resources: true
+editor: visual
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r}
+#| eval: false
+install.packages("readr")
+```
+
+```{r}
+library(readr)
+```
+
+En la clase anterior, abordamos un modelo de regresión múltiple de tres parámetros (dos predictores):
+
+$$
+Y_i = \beta_0 + \beta_1X_{1i} + \beta_2X_{2i} + \varepsilon_i
+$$
+
+¿Pero qué pasaría si sospecháramos que un efecto (por ejemplo, $\beta_2$) depende de $X_1$? En este caso, pondríamos a prueba el siguiente modelo:
+
+$$
+Y_i = \beta_0 + \beta_1X_1 + \beta_2X_2 + \beta_3X_1X_2 + \varepsilon_i
+$$
+
+La multiplicación entre $X_1$ y $X_2$ es equivalente a plantear lo siguiente:
+
+$$
+Y_i = \beta_0 + \beta_1X_1 + (\beta_2X_2 + \beta_3X_1X_2) + \varepsilon_i
+$$
+
+$$
+Y_i = \beta_0 + \beta_1X_1 + (\beta_2 + \beta_3X_1)X_2 + \varepsilon_i
+$$
+
+Si ponemos a prueba la hipótesis nula de que $\beta_3=0$ y esta no se rechaza, entonces el modelo sería el siguiente:
+
+$$
+Y_i = \beta_0 + \beta_1X_1 + (\beta_2 + 0X_1)X_2 + \varepsilon_i
+$$
+
+$$
+Y_i = \beta_0 + \beta_1X_1 + \beta_2X_2 + \varepsilon_i
+$$
+
+Si se rechaza la hipótesis nula ($\beta_3 \ne 0$), entonces tendríamos que concluir que el efecto de $X_2$ sobre $Y$ depende de $X_1$.
+
+Veamos un ejemplo.
+
+```{r}
+runners <- read_table("runners.txt")
+```
+
+Con estos datos podríamos poner a prueba varias hipótesis:
+
+1.  ¿La edad tiene un efecto sobre el tiempo de carrera?
+
+2.  ¿El entrenamiento tiene un efecto sobre el tiempo de carrera?
+
+3.  Controlando la edad, ¿el entrenamiento tiene un efecto sobre el tiempo de carrera?
+
+4.  Controlando el entrenamiento, ¿la edad tiene un efecto sobre el tiempo de carrera?
+
+5.  **¿El efecto de la edad sobre el tiempo de carrera depende del entrenamiento?**
+
+6.  **¿El efecto del entrenamiento sobre el tiempo de carrera depende de la edad?**
+
+Vamos a concentrarnos en la pregunta 5.
+
+Tal y como lo hemos hecho en clase previas, procedemos a estimar un modelo C(ompacto) y un modelo A(umentado).
+
+```{r}
+modeloC <- lm(time ~ 1 + age + training, data = runners)
+modeloA1 <- lm(time ~ 1 + age + training + age*training, data = runners)
+```
+
+Ahora los comparamos para determinar si la inclusión de la interacción reduce significativamente el SSE (*Sum of Squared Errors*).
+
+```{r}
+anova(modeloC, modeloA1)
+```
+
+Dado que es poco probable ($p = 0.03246$) que $F \ge 4.7465$ si se asume la hipótesis nula de que ambos modelos generan el mismo error ($\beta_3 = 0$), entonces debemos rechazar el modelo C y concluir que existe una interacción entre la edad y el entrenamiento.
+
+Para entender mejor los resultados, veamos un gráfico basado en el modelo C.
+
+```{r}
+coef(modeloC)
+```
+
+```{r}
+age <- runners$age
+training <- runners$training
+```
+
+```{r}
+b0 <- 24.6051900
+b1 <- 0.1672437
+b2 <- -0.2572801
+
+training1 <- 10
+training2 <- 30
+training3 <- 50
+
+time1 <- b0 + b1*age + b2*training1
+time2 <- b0 + b1*age + b2*training2
+time3 <- b0 + b1*age + b2*training3
+
+plot(age, time1, type="l", ylim = c(15, 35), ylab = "time", col = "red")
+lines(age, time2, ylim = c(15, 35), col = "blue")
+lines(age, time3, ylim = c(15, 35), col = "green")
+```
+
+Ahora veamos un gráfico basado en el modelo A, el cual toma en cuenta la interacción entre edad y entrenamiento.
+
+```{r}
+coef(modeloA1)
+```
+
+```{r}
+b0 <- 18.899198113
+b1 <- 0.308398116
+b2 <- -0.068652968
+b3 <- -0.00476738
+
+training1 <- 10
+training2 <- 40
+training3 <- 50
+
+time1 <- b0 + b1*age + b2*training1 + b3*age*training1
+time2 <- b0 + b1*age + b2*training1 + b3*age*training2
+time3 <- b0 + b1*age + b2*training1 + b3*age*training3
+
+plot(age, time1, type="l", ylim = c(15, 35), ylab = "TIME", col = "green")
+lines(age, time2, col = "blue")
+lines(age, time3, col = "gray")
+```
+
+El siguiente gráfico también muestra la interacción entre edad y entrenamiento.
+
+```{r}
+age1 <- 20
+age2 <- 40
+age3 <- 59
+
+time1 <- b0 + b1*age1 + b2*training + b3*age1*training
+time2 <- b0 + b1*age2 + b2*training + b3*age2*training
+time3 <- b0 + b1*age3 + b2*training + b3*age3*training
+
+plot(training, time1, type="l", ylim = c(15, 35), ylab = "TIME", col = "green")
+lines(training, time2, col = "blue")
+lines(training, time3, col = "gray")
+```
+
+También es posible examinar si el predictor interactúa consigo mismo, es decir, si su efecto sobre la variable de respuesta es diferente para los distintos valores que puede asumir.
+
+```{r}
+modeloA2 <- lm(time ~ 1 + training + I(training*training), data = runners)
+coef(modeloA2)
+```
+
+```{r}
+with(runners, plot(training, time))
+curve(predict(modeloA2, newdata = data.frame(training = x)), add = TRUE)
+```
+
+Los modelos se pueden volver muy complejos fácilmente, lo cual aumenta su capacidad predictiva y disminuye su comprensibilidad.
+
+$$
+Y_i = \beta_0 + \beta_1X_{i1} + \beta_2X_{i2} + \beta_3X_{i3} + \beta_4X_{i1}X_{i2} + \beta_5X_{i1}X_{i3} + \beta_6X_{i2}X_{i3} + \beta_7X_{i1}X_{i2}X_{i3} + \varepsilon_i
+$$
+
+Tome en cuenta que el modelo anterior solo tiene interacciones entre predictores diferentes, es decir, aún se podrían incluir interacciones de cada predictor consigo mismo.
+
+En conclusión, los modelos con interacciones amplían considerablemente el rango de preguntas que se pueden hacer a los datos. Lo hacen permitiendo que los coeficientes de los predictores varíen en función de ellos mismos y de otros predictores.

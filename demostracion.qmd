@@ -1,8 +1,8 @@
 ---
-title: "Práctica de Interacciones"
+title: "Demostración"
 editor: visual
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 Estos paquetes deben estar instalados:
@@ -26,7 +26,7 @@ library(tidyr)
 library(modelbased)
 ```
 
-Lea el archivo de datos **ageMemory.sav** con la función `read_sav()` y guarde los datos en un objeto llamado `ageMemory`.
+Importamos el archivo de datos **ageMemory.sav** con la función `read_sav()`.
 
 ```{r}
 ageMemory <- read_sav("ageMemory.sav")
@@ -34,11 +34,13 @@ ageMemory <- read_sav("ageMemory.sav")
 
 Este archivo proviene del repositorio asociado al estudio publicado en Karsazi, Rezapour, Kormi-Nouri, Mottaghi, Abdekhodaie y Hatami (2021).
 
-Verifique con `glimpse()` qué tipos de columnas incluye el objeto `ageMemory`.
+Verificamos con `glimpse()` qué tipos de columnas incluye el objeto `ageMemory`.
 
 ```{r}
 glimpse(ageMemory)
 ```
+
+Seleccionamos las columnas de interés.
 
 ```{r}
 ageMemory <- ageMemory |>
@@ -48,92 +50,107 @@ ageMemory <- ageMemory |>
     ZWorkingMemory, ZWordFluency, ZEpisodicComposite)
 ```
 
-Elimine los datos perdidos (`NA`) con `drop_na()`.
+Eliminamos los datos perdidos.
 
 ```{r}
 ageMemory <- drop_na(ageMemory)
 ```
 
-Estime dos modelos C y dos modelos A, los cuales incluyen la interacción entre `Zage` y `ZNeuroticism` (modelo A1) y la interacción entre `Zage` y `ZOpenness` (modelo A2). Para los 4 modelos, utilice la misma variable de respuesta (`ZEpisodicComposite`, `ZWorkingMemory` o `ZWordFluency`).
+Estimamos un modelo modelo C y un modelo A. El modelo C incluye los predictores sin interacción y el modelo A incluye tanto los predictores como la interacción entre ellos.
 
 ```{r}
 modeloC1 <- lm(
-  ZEpisodicComposite ~ 1 + Zage + ZNeuroticism, data = ageMemory)
+  ZWordFluency ~ 1 + Zage + ZNeuroticism, data = ageMemory)
 
 modeloA1 <- lm(
-  ZEpisodicComposite ~ 1 + Zage + ZNeuroticism + Zage*ZNeuroticism, data = ageMemory)
+  ZWordFluency ~ 1 + Zage + ZNeuroticism + ZNeuroticism*Zage, data = ageMemory)
 ```
 
-```{r}
-modeloC2 <- lm(
-  ZEpisodicComposite ~ 1 + Zage + ZOpenness, data = ageMemory)
-
-modeloA2 <- lm(
-  ZEpisodicComposite ~ 1 + Zage + ZOpenness + Zage*ZOpenness, data = ageMemory)
-```
-
-Compare los modelos A con sus respectivos modelos C para determinar si las interacciones mejoran la capacidad predictiva de los modelos.
+Comparamos los modelos A y C para determinar si agregar la interacción reduce significativamente el SSE (*Sum of Squared Errors*).
 
 ```{r}
 anova(modeloC1, modeloA1)
 ```
 
 ```{r}
-anova(modeloC2, modeloA2)
-```
-
-Veamos el efecto de `Zage` para distintos niveles de `ZNeuroticism` y de `ZOpenness`. Para ello, es útil ver una representación tabular y un gráfico.
-
-```{r}
-slopeAge <- estimate_slopes(modeloA1, trend = "Zage", at = "ZNeuroticism")
-slopeAge
-plot(slopeAge)
+coef(modeloA1)
 ```
 
 ```{r}
-slopeAge <- estimate_slopes(modeloA2, trend = "Zage", at = "ZOpenness")
-slopeAge
-plot(slopeAge)
+confint(modeloA1)
 ```
+
+Veamos el efecto de `Zage` sobre `ZWordFluency` para distintos niveles de `ZNeuroticism`.
 
 ```{r}
 predictions <- estimate_expectation(modeloA1)
 plot(predictions)
 ```
 
+Ahora veamos el efecto de `ZNeuroticism` sobre **el efecto de** `Zage`, es decir, veamos la **interacción** entre `ZNeuroticism` y `Zage`.
+
 ```{r}
-predictions <- estimate_expectation(modeloA2)
-plot(predictions)
+slopeAge <- estimate_slopes(modeloA1, trend = "Zage", at = "ZNeuroticism")
+plot(slopeAge)
+slopeAge
 ```
 
-Veamos cómo se ven los coeficientes y los gráficos cuando la interacción no es estadísticamente significativa.
+Ahora veamos cómo se ven los resultados cuando la interacción **no** es estadísticamente significativa. Para ello, estimaremos 4 modelos.
 
 ```{r}
-modeloC3 <- lm(
+modeloC2 <- lm(
   ZWordFluency ~ 1 + Zage + ZOpenness, data = ageMemory)
+modeloA2 <- lm(
+  ZWordFluency ~ 1 + Zage + ZOpenness + ZOpenness*Zage, data = ageMemory)
 
+modeloC3 <- lm(
+  ZEpisodicComposite ~ 1 + Zage + ZOpenness, data = ageMemory)
 modeloA3 <- lm(
-  ZWordFluency ~ 1 + Zage + ZOpenness + Zage*ZOpenness, data = ageMemory)
+  ZEpisodicComposite ~ 1 + Zage + ZOpenness + ZOpenness*Zage, data = ageMemory)
 ```
 
+Al comparar cada modelo A con su respectivo modelo C, vemos que la interacción **NO** es estadísticamente significativa.
+
 ```{r}
+anova(modeloC2, modeloA2)
 anova(modeloC3, modeloA3)
 ```
 
 ```{r}
-coef(modeloA3) ; confint(modeloA3)
+coef(modeloA2)
+coef(modeloA3)
 ```
 
 ```{r}
-slopeAge <- estimate_slopes(modeloA3, trend = "Zage", at = "ZOpenness")
-slopeAge
+confint(modeloA2)
+confint(modeloA3)
+```
+
+Veamos los gráficos y las tablas de interacción de los modelos A2 y A3.
+
+```{r}
+# Efecto de Zage sobre ZWordFluency para distintos niveles de ZOpenness
+predictions <- estimate_expectation(modeloA2)
+plot(predictions)
+
+# Efecto de Zage sobre ZEpisodicComposite para distintos niveles de ZOpenness
+slopeAge <- estimate_slopes(modeloA2, trend = "Zage", at = "ZOpenness")
 plot(slopeAge)
+slopeAge
 ```
 
 ```{r}
+# Efecto de Zage sobre ZWordFluency para distintos niveles de ZOpenness
 predictions <- estimate_expectation(modeloA3)
 plot(predictions)
+
+# Efecto de Zage sobre ZEpisodicComposite para distintos niveles de ZOpenness
+slopeAge <- estimate_slopes(modeloA3, trend = "Zage", at = "ZOpenness")
+plot(slopeAge)
+slopeAge
 ```
+
+En conclusión, una interacción que no es estadísticamente significativa no implica que el efecto de `Zage` sea el mismo para todos los niveles de `ZOpenness`.
 
 # Referencia
 

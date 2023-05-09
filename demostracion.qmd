@@ -1,0 +1,140 @@
+---
+title: "Práctica de Interacciones"
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+Estos paquetes deben estar instalados:
+
+```{r}
+#| eval: false
+install.packages("see")
+install.packages("haven")
+install.packages("dplyr")
+install.packages("tidyr")
+install.packages("ggplot2")
+install.packages("modelbased")
+```
+
+Con la función `library()`, active los paquetes mencionados anteriormente.
+
+```{r}
+library(haven)
+library(dplyr)
+library(tidyr)
+library(modelbased)
+```
+
+Lea el archivo de datos **ageMemory.sav** con la función `read_sav()` y guarde los datos en un objeto llamado `ageMemory`.
+
+```{r}
+ageMemory <- read_sav("ageMemory.sav")
+```
+
+Este archivo proviene del repositorio asociado al estudio publicado en Karsazi, Rezapour, Kormi-Nouri, Mottaghi, Abdekhodaie y Hatami (2021).
+
+Verifique con `glimpse()` qué tipos de columnas incluye el objeto `ageMemory`.
+
+```{r}
+glimpse(ageMemory)
+```
+
+```{r}
+ageMemory <- ageMemory |>
+  select(
+    Zage, 
+    ZNeuroticism, ZOpenness, 
+    ZWorkingMemory, ZWordFluency, ZEpisodicComposite)
+```
+
+Elimine los datos perdidos (`NA`) con `drop_na()`.
+
+```{r}
+ageMemory <- drop_na(ageMemory)
+```
+
+Estime dos modelos C y dos modelos A, los cuales incluyen la interacción entre `Zage` y `ZNeuroticism` (modelo A1) y la interacción entre `Zage` y `ZOpenness` (modelo A2). Para los 4 modelos, utilice la misma variable de respuesta (`ZEpisodicComposite`, `ZWorkingMemory` o `ZWordFluency`).
+
+```{r}
+modeloC1 <- lm(
+  ZEpisodicComposite ~ 1 + Zage + ZNeuroticism, data = ageMemory)
+
+modeloA1 <- lm(
+  ZEpisodicComposite ~ 1 + Zage + ZNeuroticism + Zage*ZNeuroticism, data = ageMemory)
+```
+
+```{r}
+modeloC2 <- lm(
+  ZEpisodicComposite ~ 1 + Zage + ZOpenness, data = ageMemory)
+
+modeloA2 <- lm(
+  ZEpisodicComposite ~ 1 + Zage + ZOpenness + Zage*ZOpenness, data = ageMemory)
+```
+
+Compare los modelos A con sus respectivos modelos C para determinar si las interacciones mejoran la capacidad predictiva de los modelos.
+
+```{r}
+anova(modeloC1, modeloA1)
+```
+
+```{r}
+anova(modeloC2, modeloA2)
+```
+
+Veamos el efecto de `Zage` para distintos niveles de `ZNeuroticism` y de `ZOpenness`. Para ello, es útil ver una representación tabular y un gráfico.
+
+```{r}
+slopeAge <- estimate_slopes(modeloA1, trend = "Zage", at = "ZNeuroticism")
+slopeAge
+plot(slopeAge)
+```
+
+```{r}
+slopeAge <- estimate_slopes(modeloA2, trend = "Zage", at = "ZOpenness")
+slopeAge
+plot(slopeAge)
+```
+
+```{r}
+predictions <- estimate_expectation(modeloA1)
+plot(predictions)
+```
+
+```{r}
+predictions <- estimate_expectation(modeloA2)
+plot(predictions)
+```
+
+Veamos cómo se ven los coeficientes y los gráficos cuando la interacción no es estadísticamente significativa.
+
+```{r}
+modeloC3 <- lm(
+  ZWordFluency ~ 1 + Zage + ZOpenness, data = ageMemory)
+
+modeloA3 <- lm(
+  ZWordFluency ~ 1 + Zage + ZOpenness + Zage*ZOpenness, data = ageMemory)
+```
+
+```{r}
+anova(modeloC3, modeloA3)
+```
+
+```{r}
+coef(modeloA3) ; confint(modeloA3)
+```
+
+```{r}
+slopeAge <- estimate_slopes(modeloA3, trend = "Zage", at = "ZOpenness")
+slopeAge
+plot(slopeAge)
+```
+
+```{r}
+predictions <- estimate_expectation(modeloA3)
+plot(predictions)
+```
+
+# Referencia
+
+Karsazi, H., Rezapour, T., Kormi-Nouri, R., Mottaghi, A., Abdekhodaie, E., & Hatami, J. (2021). The moderating effect of neuroticism and openness in the relationship between age and memory: Implications for cognitive reserve. *Personality and Individual Differences*, *176*, 110773.

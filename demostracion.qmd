@@ -15,9 +15,10 @@ install.packages("dplyr")
 install.packages("tidyr")
 install.packages("ggplot2")
 install.packages("modelbased")
+install.packages("emmeans")
 ```
 
-Con la función `library()`, active los paquetes mencionados anteriormente.
+Con la función `library()`, active los paquetes siguientes paquetes.
 
 ```{r}
 library(haven)

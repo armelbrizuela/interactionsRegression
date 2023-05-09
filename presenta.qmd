@@ -23,7 +23,11 @@ $$
 Y_i = \beta_0 + \beta_1X_{1i} + \beta_2X_{2i} + \varepsilon_i
 $$
 
-¿Pero qué pasaría si sospecháramos que un efecto (por ejemplo, $\beta_2$) depende de $X_1$? En este caso, pondríamos a prueba el siguiente modelo:
+¿Pero qué pasaría si sospecháramos que un efecto (por ejemplo, $\beta_2$) depende de $X_1$? Otra forma de decir lo mismo es que $X_1$ **modera** la relación entre $X_2$ y $Y_i$.
+
+![](moderacion.png){fig-align="center"}
+
+En este caso, pondríamos a prueba el siguiente modelo:
 
 $$
 Y_i = \beta_0 + \beta_1X_1 + \beta_2X_2 + \beta_3X_1X_2 + \varepsilon_i
@@ -39,6 +43,8 @@ $$
 Y_i = \beta_0 + \beta_1X_1 + (\beta_2 + \beta_3X_1)X_2 + \varepsilon_i
 $$
 
+El coeficiente de $X_2$ ($\beta_2$) está en función de los valores que asuman $\beta_3$ y $X_1$.
+
 Si ponemos a prueba la hipótesis nula de que $\beta_3=0$ y esta no se rechaza, entonces el modelo sería el siguiente:
 
 $$
@@ -49,7 +55,7 @@ $$
 Y_i = \beta_0 + \beta_1X_1 + \beta_2X_2 + \varepsilon_i
 $$
 
-Si se rechaza la hipótesis nula ($\beta_3 \ne 0$), entonces tendríamos que concluir que el efecto de $X_2$ sobre $Y$ depende de $X_1$.
+Si se rechaza la hipótesis nula ($\beta_3 \ne 0$), entonces no podríamos interpretar el efecto simple de $X_2$ sobre $Y_i$, ya que dicho efecto en parte depende del valor específico que asuma $X_1$.
 
 Veamos un ejemplo.
 
@@ -63,15 +69,11 @@ Con estos datos podríamos poner a prueba varias hipótesis:
 
 2.  ¿El entrenamiento tiene un efecto sobre el tiempo de carrera?
 
-3.  Controlando la edad, ¿el entrenamiento tiene un efecto sobre el tiempo de carrera?
+3.  Controlando la edad, ¿el entrenamiento tiene un efecto sobre el tiempo de carrera? Controlando el entrenamiento, ¿la edad tiene un efecto sobre el tiempo de carrera?
 
-4.  Controlando el entrenamiento, ¿la edad tiene un efecto sobre el tiempo de carrera?
+4.  **¿El efecto de la edad sobre el tiempo de carrera depende del entrenamiento? ¿El efecto del entrenamiento sobre el tiempo de carrera depende de la edad?**
 
-5.  **¿El efecto de la edad sobre el tiempo de carrera depende del entrenamiento?**
-
-6.  **¿El efecto del entrenamiento sobre el tiempo de carrera depende de la edad?**
-
-Vamos a concentrarnos en la pregunta 5.
+Vamos a concentrarnos en las preguntas 4.
 
 Tal y como lo hemos hecho en clase previas, procedemos a estimar un modelo C(ompacto) y un modelo A(umentado).
 
@@ -88,7 +90,7 @@ anova(modeloC, modeloA1)
 
 Dado que es poco probable ($p = 0.03246$) que $F \ge 4.7465$ si se asume la hipótesis nula de que ambos modelos generan el mismo error ($\beta_3 = 0$), entonces debemos rechazar el modelo C y concluir que existe una interacción entre la edad y el entrenamiento.
 
-Para entender mejor los resultados, veamos un gráfico basado en el modelo C.
+Para entender mejor los resultados, veamos los coeficientes del modelo C y un gráfico.
 
 ```{r}
 coef(modeloC)
@@ -112,12 +114,17 @@ time1 <- b0 + b1*age + b2*training1
 time2 <- b0 + b1*age + b2*training2
 time3 <- b0 + b1*age + b2*training3
 
-plot(age, time1, type="l", ylim = c(15, 35), ylab = "time", col = "red")
-lines(age, time2, ylim = c(15, 35), col = "blue")
-lines(age, time3, ylim = c(15, 35), col = "green")
+plot(age, time1, type="l", ylim = c(15, 35), ylab = "TIME", col = "green")
+text(x = 40, y = 29.8, labels = training1)
+lines(age, time2, col = "blue")
+text(x = 40, y = 24.5, labels = training2)
+lines(age, time3, col = "red")
+text(x = 40, y = 19.3, labels = training3)
 ```
 
-Ahora veamos un gráfico basado en el modelo A, el cual toma en cuenta la interacción entre edad y entrenamiento.
+El gráfico anterior no incluye interacción, es decir, presume que el efecto de la edad sobre el tiempo es el mismo para cualquier nivel de entrenamiento.
+
+Ahora veamos un gráfico basado en el modelo A, el cual incluye la interacción entre edad y entrenamiento.
 
 ```{r}
 coef(modeloA1)
@@ -130,19 +137,22 @@ b2 <- -0.068652968
 b3 <- -0.00476738
 
 training1 <- 10
-training2 <- 40
+training2 <- 30
 training3 <- 50
 
 time1 <- b0 + b1*age + b2*training1 + b3*age*training1
-time2 <- b0 + b1*age + b2*training1 + b3*age*training2
-time3 <- b0 + b1*age + b2*training1 + b3*age*training3
+time2 <- b0 + b1*age + b2*training2 + b3*age*training2
+time3 <- b0 + b1*age + b2*training3 + b3*age*training3
 
 plot(age, time1, type="l", ylim = c(15, 35), ylab = "TIME", col = "green")
+text(x = 40, y = 29.8, labels = training1)
 lines(age, time2, col = "blue")
-lines(age, time3, col = "gray")
+text(x = 40, y = 24.5, labels = training2)
+lines(age, time3, col = "red")
+text(x = 40, y = 19.3, labels = training3)
 ```
 
-El siguiente gráfico también muestra la interacción entre edad y entrenamiento.
+También se puede graficar el efecto del entrenamiento sobre el tiempo para distintas edades.
 
 ```{r}
 age1 <- 20
@@ -154,11 +164,14 @@ time2 <- b0 + b1*age2 + b2*training + b3*age2*training
 time3 <- b0 + b1*age3 + b2*training + b3*age3*training
 
 plot(training, time1, type="l", ylim = c(15, 35), ylab = "TIME", col = "green")
+text(x = 30, y = 21, labels = age1)
 lines(training, time2, col = "blue")
-lines(training, time3, col = "gray")
+text(x = 30, y = 24.5, labels = age2)
+lines(training, time3, col = "red")
+text(x = 30, y = 27.5, labels = age3)
 ```
 
-También es posible examinar si el predictor interactúa consigo mismo, es decir, si su efecto sobre la variable de respuesta es diferente para los distintos valores que puede asumir.
+También es posible examinar si el predictor interactúa consigo mismo, es decir, si su efecto sobre la variable de respuesta es diferente para los valores que puede asumir.
 
 ```{r}
 modeloA2 <- lm(time ~ 1 + training + I(training*training), data = runners)
@@ -170,7 +183,7 @@ with(runners, plot(training, time))
 curve(predict(modeloA2, newdata = data.frame(training = x)), add = TRUE)
 ```
 
-Los modelos se pueden volver muy complejos fácilmente, lo cual aumenta su capacidad predictiva y disminuye su comprensibilidad.
+Los modelos se pueden volver muy complejos fácilmente, lo cual aumenta su capacidad predictiva pero disminuye su parsimonia y comprensibilidad.
 
 $$
 Y_i = \beta_0 + \beta_1X_{i1} + \beta_2X_{i2} + \beta_3X_{i3} + \beta_4X_{i1}X_{i2} + \beta_5X_{i1}X_{i3} + \beta_6X_{i2}X_{i3} + \beta_7X_{i1}X_{i2}X_{i3} + \varepsilon_i
@@ -178,4 +191,4 @@ $$
 
 Tome en cuenta que el modelo anterior solo tiene interacciones entre predictores diferentes, es decir, aún se podrían incluir interacciones de cada predictor consigo mismo.
 
-En conclusión, los modelos con interacciones amplían considerablemente el rango de preguntas que se pueden hacer a los datos. Lo hacen permitiendo que los coeficientes de los predictores varíen en función de ellos mismos y de otros predictores.
+En conclusión, los modelos con interacciones amplían considerablemente el rango de preguntas que se pueden hacer a los datos. Lo hacen permitiendo que los coeficientes de los predictores varíen en función de otros predictores y de ellos mismos.
